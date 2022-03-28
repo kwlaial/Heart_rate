@@ -1,0 +1,6 @@
+{
+    "configuration": "cpu=atmega328old",
+    "board": "arduino:avr:nano",
+    "port": "/dev/tty.usbserial-1420",
+    "sketch": "Calibration_XD-58C.ino"
+}
