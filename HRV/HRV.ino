@@ -1,7 +1,7 @@
-int ecgPin = 0;
-int upperThreshold = 100;
-int lowerThreshold = 0;
-int ecgOffset = 400;
+const int ecgPin = 0;
+int upperThreshold = 2200;
+int lowerThreshold = 1000;
+int ecgOffset = 8000;
 float beatsPerMinute = 0.0;
 bool alreadyPeaked = false;
 unsigned long firstPeakTime = 0;
@@ -17,14 +17,19 @@ float rrDiff = 0.0;
 float rrDiffSquaredTotal = 0.0;
 float diffCount = 0.0;
 float rmssd = -1.0;
+float LPF = 0.0;
+float LPF_beat = 0.0;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void loop() { 
-  int ecgReading = analogRead(ecgPin) - ecgOffset; 
+  float weight = 0.1;                               
+  LPF = (1.0 - weight) * LPF + weight * (analogRead(ecgPin)*500);
+  int ecgReading = LPF + ecgOffset; 
+  
   // Measure the ECG reading minus an offset to bring it into the same
   // range as the heart rate (i.e. around 60 to 100 bpm)
 
@@ -85,7 +90,7 @@ void loop() {
   }
 
   // Once five minute window has elapsed, calculate the RMSSD
-  if (millis() - hrvStartTime >= 300000 && !hrvComplete) {
+  if (millis() - hrvStartTime >= 120000 && !hrvComplete) {
     rmssd = sqrt(rrDiffSquaredTotal/diffCount);
     hrvComplete = true;
   } 
@@ -101,10 +106,12 @@ void loop() {
   // real-world elapsed time for HRV computation may exceed 5 minutes. 
   // This should not make a practical difference for RMSSD calculation, 
   // but it is important to note if critical precision is required.
-  Serial.print(ecgReading);
-  Serial.print(",");
-  Serial.print(beatsPerMinute);
-  Serial.print(",");
-  Serial.println(rmssd);  
+  Serial.println(ecgReading);
+  /*if (beatsPerMinute >= 60 && beatsPerMinute <= 140){
+      float weight = 0.1;                               
+      LPF_beat = (1.0 - weight) * LPF_beat + weight * beatsPerMinute;
+      Serial.println(LPF_beat);    
+  }
+  if (hrvComplete == true) Serial.println(rmssd); */
   delay(10);
 }
