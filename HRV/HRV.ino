@@ -1,6 +1,6 @@
 const int ecgPin = 0;
-int upperThreshold = 2200;
-int lowerThreshold = 1000;
+int upperThreshold = 1500;
+int lowerThreshold = 100;
 int ecgOffset = 8000;
 float beatsPerMinute = 0.0;
 bool alreadyPeaked = false;
@@ -19,12 +19,51 @@ float diffCount = 0.0;
 float rmssd = -1.0;
 float LPF = 0.0;
 float LPF_beat = 0.0;
+bool start = false;
+enum str_conditions { STRESSED , RELAXED };
+int menuChoice = 0;
+float phq_posstr_hrv = -0.07761*rmssd + 14.40413;
+float phq_negstr_hrv = -0.08183*rmssd + 15.12931;
+float phq_rel_hrv = -0.2331*rmssd + 29.3654;
+float gad_posstr_hrv = -0.09276*rmssd + 14.14535;
+float gad_negstr_hrv = -0.09875*rmssd + 15.06781;
+float gad_rel_hrv = -0.1847*rmssd + 24.3324;
+
 
 void setup() {
   Serial.begin(115200);
+  
 }
 
+void(* resetFunc) (void) = 0;//declare reset function at address 0
+
+void phq_func (int rmsdd){
+  if (rmsdd >= 0 && rmsdd <= 4) Serial.println("Depression severity: none");
+  else if (rmsdd >= 5 && rmsdd <= 9) Serial.println("Depression severity: mild");
+  else if (rmsdd >= 10 && rmsdd <= 14) Serial.println("Depression severity: moderate");
+  else if (rmsdd >= 15 && rmsdd <= 19) Serial.println("Depression severity: moderately severe");
+  else if (rmsdd >= 20 && rmsdd <= 27) Serial.println("Depression severity: severe");  
+}
+
+void gad_func (int rmsdd){
+  if (rmsdd >= 0 && rmsdd <= 4) Serial.println("Depression severity: minimal anxiety");
+  else if (rmsdd >= 5 && rmsdd <= 9) Serial.println("Depression severity: mild anxiety");
+  else if (rmsdd >= 10 && rmsdd <= 14) Serial.println("Depression severity: moderate anxiety");
+  else if (rmsdd >= 15) Serial.println("Depression severity: severe anxiety");
+}
+
+
 void loop() { 
+
+  if(start == false) {
+    Serial.println("Do you feel (1)positively STRESSED, (2)negatively STRESSED or (3)RELAXED? Please enter the number.");
+    while (Serial.available() == 0) {
+    }
+    menuChoice = Serial.parseInt();
+    delay(5000);
+    start = true;
+  }
+
   float weight = 0.1;                               
   LPF = (1.0 - weight) * LPF + weight * (analogRead(ecgPin)*500);
   int ecgReading = LPF + ecgOffset; 
@@ -69,17 +108,40 @@ void loop() {
   }
 
   // Once five minute window has elapsed, calculate the RMSSD
-  if (millis() - hrvStartTime >= 120000 && !hrvComplete) {
+  if (millis() - hrvStartTime >= 60000 && !hrvComplete) {
     rmssd = sqrt(rrDiffSquaredTotal/diffCount);
     hrvComplete = true;
   } 
 
-  //Serial.println(ecgReading);
-  if (beatsPerMinute >= 60 && beatsPerMinute <= 140){
+  Serial.println(ecgReading);
+  /*if (beatsPerMinute >= 60 && beatsPerMinute <= 140){
       float weight = 0.1;                               
       LPF_beat = (1.0 - weight) * LPF_beat + weight * beatsPerMinute;
       Serial.println(LPF_beat);    
+  }*/
+  if (hrvComplete == true ) {
+    Serial.println(rmssd);
+    
+    switch (menuChoice) {
+      case 1:
+      phq_func (phq_posstr_hrv);
+      gad_func (gad_posstr_hrv);
+
+      case 2:
+      phq_func (phq_negstr_hrv);
+      gad_func (gad_negstr_hrv);
+
+      case 3:
+      phq_func (phq_rel_hrv);
+      gad_func (gad_rel_hrv);
+    }
+    
   }
-  if (hrvComplete == true) Serial.println(rmssd); 
+  /*else if (hrvComplete == true){
+    Serial.println("please try not to move and relax");
+    Serial.println("taking reading again");
+    delay(5000);
+    resetFunc();  //call reset
+  }*/
   delay(10);
 }
