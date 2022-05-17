@@ -22,13 +22,6 @@ float LPF_beat = 0.0;
 bool start = false;
 enum str_conditions { STRESSED , RELAXED };
 int menuChoice = 0;
-float phq_posstr_hrv = -0.07761*rmssd + 14.40413;
-float phq_negstr_hrv = -0.08183*rmssd + 15.12931;
-float phq_rel_hrv = -0.2331*rmssd + 29.3654;
-float gad_posstr_hrv = -0.09276*rmssd + 14.14535;
-float gad_negstr_hrv = -0.09875*rmssd + 15.06781;
-float gad_rel_hrv = -0.1847*rmssd + 24.3324;
-
 
 void setup() {
   Serial.begin(115200);
@@ -46,10 +39,10 @@ void phq_func (int rmsdd){
 }
 
 void gad_func (int rmsdd){
-  if (rmsdd >= 0 && rmsdd <= 4) Serial.println("Depression severity: minimal anxiety");
-  else if (rmsdd >= 5 && rmsdd <= 9) Serial.println("Depression severity: mild anxiety");
-  else if (rmsdd >= 10 && rmsdd <= 14) Serial.println("Depression severity: moderate anxiety");
-  else if (rmsdd >= 15) Serial.println("Depression severity: severe anxiety");
+  if (rmsdd >= 0 && rmsdd <= 4) Serial.println("Anxiety level: minimal anxiety");
+  else if (rmsdd >= 5 && rmsdd <= 9) Serial.println("Anxiety level: mild anxiety");
+  else if (rmsdd >= 10 && rmsdd <= 14) Serial.println("Anxiety level: moderate anxiety");
+  else if (rmsdd >= 15) Serial.println("Anxiety level: severe anxiety");
 }
 
 
@@ -99,12 +92,14 @@ void loop() {
   if (hrvUpdate && hrvStarted) {
     // Add the square of successive differences between 
     // R-to-R intervals to the running total
-    rrDiff = float(rrInterval) - float(rrIntervalPrevious);
-    rrDiffSquaredTotal = rrDiffSquaredTotal + sq(rrDiff);
-    // Count the number of successive differences for averaging
-    diffCount = diffCount + 1.0;
-    // Reset the hrvUpdate flag
-    hrvUpdate = false;
+    if(rrInterval > 500 && rrInterval <1300 &&rrIntervalPrevious > 500 && rrIntervalPrevious <1300){
+      rrDiff = float(rrInterval) - float(rrIntervalPrevious);
+      rrDiffSquaredTotal = rrDiffSquaredTotal + sq(rrDiff);
+      // Count the number of successive differences for averaging
+      diffCount = diffCount + 1.0;
+      // Reset the hrvUpdate flag
+      hrvUpdate = false;
+      }
   }
 
   // Once five minute window has elapsed, calculate the RMSSD
@@ -113,35 +108,47 @@ void loop() {
     hrvComplete = true;
   } 
 
-  Serial.println(ecgReading);
+  //Serial.println(ecgReading);
+  //Serial.println(rrInterval);
   /*if (beatsPerMinute >= 60 && beatsPerMinute <= 140){
       float weight = 0.1;                               
       LPF_beat = (1.0 - weight) * LPF_beat + weight * beatsPerMinute;
       Serial.println(LPF_beat);    
   }*/
-  if (hrvComplete == true ) {
+  if (hrvComplete == true && rmssd < 100) {
+    Serial.print("Your HRV reading is: ");
     Serial.println(rmssd);
-    
+    float phq_posstr_hrv = -0.07761*rmssd + 14.40413;
+    float phq_negstr_hrv = -0.08183*rmssd + 15.12931;
+    float phq_rel_hrv = -0.2331*rmssd + 29.3654;
+    float gad_posstr_hrv = -0.09276*rmssd + 14.14535;
+    float gad_negstr_hrv = -0.09875*rmssd + 15.06781;
+    float gad_rel_hrv = -0.1847*rmssd + 24.3324;
+  
     switch (menuChoice) {
+
       case 1:
       phq_func (phq_posstr_hrv);
       gad_func (gad_posstr_hrv);
+      break;
 
       case 2:
       phq_func (phq_negstr_hrv);
       gad_func (gad_negstr_hrv);
+      break;
 
       case 3:
       phq_func (phq_rel_hrv);
       gad_func (gad_rel_hrv);
+      break;
     }
     
   }
-  /*else if (hrvComplete == true){
+  else if (hrvComplete == true){
     Serial.println("please try not to move and relax");
     Serial.println("taking reading again");
     delay(5000);
     resetFunc();  //call reset
-  }*/
+  }
   delay(10);
 }
